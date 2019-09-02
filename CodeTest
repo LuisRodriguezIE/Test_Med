@@ -1,0 +1,967 @@
+########                 Librerias, Descripción ########  
+library(caTools)         # Tools: moving window statistics, GIF, Base64, ROC 
+library(corrplot)        # Visualization of a Correlation Matrix
+library(dplyr)           # Grammar of Data Manipulation
+library(dygraphs)        # Interactive Time Series 	
+library(data.table)	     # Data information handle
+library(DBI)             # R Database Interface
+library(directlabels)    # Direct Labels for Multicolor Plots
+library(forecast)        # Forecasting Functions for Time Series and Linear Models
+library(factoextra)      # Extract and Visualize the Results of Multivariate Data Analyses
+library(GGally)          # Extension to ggplot
+library(ggcorrplot)      # Visualization of Correlation Matrix using ggplot
+library(ggrepel)	       # Automatically Position Non-Overlapping Text Labels with 'ggplot2
+library(gmapsdistance)   # Distance and Travel Time Between Two Points from Google Maps
+library(geosphere)       # Compute various aspects of distance
+library(ggplot2)         # Create Elegant Data Visualisations Using the Grammar of Graphics
+library(ggfortify)       # Data Visualization Tools for Statistical Analysis Results
+library(googleway)       # Generates a google map objectCarga las Librerias 
+library(grid)            # The Grid Graphics Package 
+library(gridExtra)       # Miscellaneous Functions for "Grid" Graphics 
+library(httpuv)          # HTTP and WebSocket Server
+library(highcharter)     # A Wrapper for the 'Highcharts'
+library(keras)           # High-level neural networks API developed with a focus on enabling fast experimentation
+library(knitr)           # A General-Purpose Package for Dynamic Report
+library(inegiR)          # Integrate INEGI's API with R.
+library(leaflet)         # Create Interactive Web Maps with the JavaScript 
+library(lattice)         # Trellis Graphics for R
+library(lubridate)       # Make Dealing with Dates a Little 
+library(magrittr)        # A Forward-Pipe Operator for R
+library(mxmaps)          # Tools for static and interactive choropleths of Mexico.
+library(mlbench)         # Machine Learning Benchmark Problems 
+library(neuralnet)       # Training of Neural Networks
+# library(plotGoogleMaps)# Plot Spatial or Spatio-Temporal Data Over Google Maps
+# library(plot3D)        # Plotting Multi-Dimensional Data
+library(plotly)          # Create Interactive Web Graphics via 'plotly.js'
+library(psych)           # Procedures for Psychological, Psychometric, and Personality
+# library(psych)         # Procedures for Psychological, Psychometric, and Personality Research
+library(quantmod)        # Quantitative Financial Modelling Framework
+library(rgl)             # 3D Visualization Using OpenGL
+library(RODBC)           # ODBC Database Access 
+# library(Rcpp)          # Seamless R and C++ Integration
+library(rgeos)           # Interface to Geometry Engine
+library(rgdal)           # Bindings for the 'Geospatial' Data 
+# library(Rmisc)         # Contains many functions useful for data analysis and utility operations. (MASKING PROBLEM)
+library(sf)              # Simple Features for R
+library(sp)              # Classes and Methods for Spatial Data
+library(spData)          # Datasets for Spatial Analysis
+library(spDataLarge)     # Large datasets for spatial analysis
+library(scales)          # Scale Functions for Visualization
+library(shiny)           # Web Application Framework for R
+library(shinydashboard)  # Create Dashboards with 'Shiny'
+library(stringr)         # Simple, Consistent Wrappers for Common String Operations 
+library(stringi)         # Character String Processing 
+# library(scatterplot3d) # 3D Scatter Plot
+library(tseries)         # Time Series Analysis and Computational Finance 
+library(tidyr)           # Easily Tidy Data with 'spread()' and 'gather()' 
+library(tidyverse)       # Easily Install and Load the 'Tidyverse'
+library(xts)             # EXtensible Time Series
+library(writexl)         # Export Data Frames to Excel 'xlsx' Format
+library(zoo)             # S3 Infrastructure for Regular and Irregular Time Series (Z's Ordered Observations)
+
+#####                      Definición de la ruta de trabajo #####
+setwd("C:/Users/admlurodriguez/Desktop/Luis Rodriguez/Proyecto Sistemas Salud/Data")  # Ejecutar Importante !!!
+
+#####                      rm(list=ls())  #####
+
+############################################ Consulta de Informacion ###########################################
+
+cn <-odbcDriverConnect(connection = "Driver={SQL Server Native Client 11.0};
+                       server=simimx-bddcom;database=Ventas;trusted_connection=yes;")
+Consultas <- "DECLARE
+@CveConsultorio VARCHAR(10), -- No usado por el momento
+@FechaIni      DATE,
+@FechaFin      DATE
+SET @CveConsultorio =  '1' -- No usado por el momento
+SET @FechaIni =     '2019-01-01'  
+SET @FechaFin =     '2019-05-19'
+SELECT Convert(CHAR(6), ICabecera.Fecha,112) AS Periodo, ICabecera.Fecha, Hora, ICabecera.DocumentoOrigenId, ICabecera.CveConsultorio,
+TipoDocumento, FolioReceta, CvePaciente, ICabecera.CveUnidad, Consultorio, TurnoConsultorio, Cedula, CveSexo, 
+CveEdoCivil, SexoPaciente, EdadPaciente, IDiagnostico.Diagnostico, VentaFS, ITratamiento.CveProducto, Sustancia, 
+PresentacionSustancia, ConcentracionSustancia, CantidadReceta, FrecuenciaTratamiento, DuracionTratamiento,
+Producto, Categoria, CatComercial, EsKit, EsFCat, Estacionalidad, 
+FamComercial, Fraccion, Precio, PrecioVenta, EstatusRegistro, FechaAlta, CveBrick, Unidad, CveDivision, CategoriaVenta, Direccion, 
+Supervision, FechaApertura, EstRegistroU, EstatusUnidad, Estado, EstadoQV,
+Ciudad, CiudadQV, Municipio, Colonia, Calle, CodigoPostal, Latitud, Longitud
+FROM ( -- CABECERA
+SELECT Fecha, Hora, TipoDocumento, DocumentoOrigenId, FolioReceta,
+CvePaciente, CveUnidad, CveConsultorio, Consultorio, TurnoConsultorio, Cedula, CveSexo, 
+CveEdoCivil, Sexo AS SexoPaciente, Edad AS EdadPaciente
+FROM Salud.dbo.CabeceraDocumento WITH(NOLOCK)
+WHERE Fecha BETWEEN @FechaIni AND @FechaFin
+) AS ICabecera left join ( -- DIAGNOSTICO
+SELECT  Fecha, DocumentoOrigenId, CveConsultorio, Diagnostico 
+FROM Salud.dbo.Diagnostico WITH(NOLOCK)
+WHERE Fecha BETWEEN @FechaIni AND @FechaFin
+GROUP BY Fecha, DocumentoOrigenId, CveConsultorio, Diagnostico ) AS IDiagnostico ON 
+ICabecera.Fecha = IDiagnostico.Fecha AND ICabecera.DocumentoOrigenId = IDiagnostico.DocumentoOrigenId
+AND ICabecera.CveConsultorio = IDiagnostico.CveConsultorio LEFT JOIN ( -- TRATAMIENTO
+SELECT Fecha, DocumentoOrigenId, CveConsultorio, VentaFS, CveProducto, Sustancia, 
+PresentacionSustancia, ConcentracionSustancia, CantidadReceta, FrecuenciaTratamiento, DuracionTratamiento 
+FROM Salud.dbo.Tratamiento WITH(NOLOCK)
+WHERE Fecha BETWEEN @FechaIni AND @FechaFin
+) AS ITratamiento ON ICabecera.Fecha = ITratamiento.Fecha AND ICabecera.DocumentoOrigenId = ITratamiento.DocumentoOrigenId
+AND ICabecera.CveConsultorio = ITratamiento.CveConsultorio LEFT JOIN ( -- PRODUCTO
+SELECT CveProducto, Producto, Categoria, CatComercial, EsKit, EsFCat, Estacionalidad, 
+FamComercial, Fraccion, Precio, PrecioVenta, EstatusRegistro, FechaAlta
+FROM Ventas.Catalogo.ProductoQV
+) AS IProductoQV ON ITratamiento.CveProducto = IProductoQV.CveProducto LEFT JOIN (
+SELECT CveUnidad, CveBrick, Unidad, CveDivision, CategoriaVenta, Direccion, 
+Supervision, FechaApertura, EstatusRegistro AS EstRegistroU, EstatusUnidad, Estado, EstadoQV,
+Ciudad, CiudadQV, Municipio, Colonia, Calle, CodigoPostal, Latitud, Longitud
+FROM Ventas.Catalogo.Unidad 
+) AS IUnidad ON ICabecera.CveUnidad = IUnidad.CveUnidad
+ORDER BY ICabecera.Fecha, Hora, ICabecera.DocumentoOrigenId, ICabecera.CveConsultorio, ITratamiento.CveProducto"
+
+InfoConsultas <- sqlQuery(cn, Consultas)
+
+# write.csv(InfoConsultas, "InfoConsultas.csv", row.names = FALSE)
+
+MuestraInfo <- tail(InfoConsultas, 15000)
+
+# View(MuestraInfo)
+
+ConsultorioMuestra <- InfoConsultas%>%
+  dplyr::filter(CveConsultorio == '116')
+
+View(ConsultorioMuestra)
+
+write.csv(ConsultorioMuestra, "ConsultorioMuestra.csv", row.names = FALSE)
+
+########################### Consulta Día Semana ###########################
+
+cndw <-odbcDriverConnect(connection = "Driver={SQL Server Native Client 11.0};
+                       server=simimx-dw;database=Ventas;trusted_connection=yes;")
+
+QueryWeek <- "SELECT DISTINCT(Fecha), DATENAME(DW, Fecha) AS DiaSemana
+FROM Ventas.dbo.VtaDiariaProducto WITH(NOLOCK)
+WHERE Fecha BETWEEN '2019-01-01' AND '2019-05-19'
+ORDER BY Fecha"
+
+DiaSemana <- sqlQuery(cndw, QueryWeek)
+
+# View(DiaSemana)
+
+################################## Cálculo de los productos necesarios ##################################
+
+InfoConsultas$PresentacionSustancia <- tolower(iconv(trimws(InfoConsultas$PresentacionSustancia), from = "latin1", to = 'ASCII//TRANSLIT'))
+InfoConsultas$CantidadReceta        <- tolower(iconv(trimws(InfoConsultas$CantidadReceta), from = "latin1", to = 'ASCII//TRANSLIT'))
+InfoConsultas$FrecuenciaTratamiento <- tolower(iconv(trimws(InfoConsultas$FrecuenciaTratamiento), from = "latin1", to = 'ASCII//TRANSLIT'))
+InfoConsultas$DuracionTratamiento   <- tolower(iconv(trimws(InfoConsultas$DuracionTratamiento), from = "latin1", to = 'ASCII//TRANSLIT'))
+
+InfoConsultas$NumeroPresentacion <- as.numeric(str_extract(gsub("([0-9]+|[0-9]+\\.[0-9]+).*$", "\\1", 
+                                                                InfoConsultas$PresentacionSustancia), "([0-9]+).*$"))
+
+InfoConsultas$MatchPresentacion <- str_extract(InfoConsultas$PresentacionSustancia,
+                                               'tab|tbl|tabl|amp|cap|ml|mg|gr|gota|sobre|uni|comp|ovu')
+
+InfoConsultas <- InfoConsultas%>%
+  mutate(MatchPresentacion = ifelse(MatchPresentacion == 'tab'|
+                                    MatchPresentacion == 'amp'|
+                                    MatchPresentacion == 'cap'|
+                                    MatchPresentacion == 'comp'|
+                                    MatchPresentacion == 'ovu', 'presentacion', MatchPresentacion))
+
+InfoConsultas$NumeroCantidad  <- as.numeric(str_extract(gsub("([0-9]+|[0-9]+\\.[0-9]+).*$", "\\1",
+                                                             InfoConsultas$CantidadReceta ), "([0-9]+).*$"))
+
+InfoConsultas <- InfoConsultas%>%
+  mutate(NumeroCantidad = ifelse((str_extract(InfoConsultas$CantidadReceta,'una|unica') == 'una' |
+                                    str_extract(InfoConsultas$CantidadReceta,'una|unica') == 'unica') & is.na(NumeroCantidad),
+                                 1, NumeroCantidad))
+
+InfoConsultas$MatchCantidad <- str_extract(InfoConsultas$CantidadReceta,
+                                           'tab|tbl|tabl|amp|cap|ml|mg|gr|gota|sobre|uni|comp|ovu')
+
+InfoConsultas <- InfoConsultas%>%
+  dplyr::mutate(MatchCantidad = ifelse(is.na(MatchCantidad) & !is.na(NumeroCantidad), MatchPresentacion, MatchCantidad))
+
+InfoConsultas <- InfoConsultas%>%
+  mutate(MatchCantidad = ifelse(MatchCantidad == 'tab'|
+                                MatchCantidad == 'amp'|
+                                MatchCantidad == 'cap'|
+                                MatchCantidad == 'comp'|
+                                MatchCantidad == 'ovu', 'presentacion', MatchCantidad))
+
+InfoConsultas$NumeroFrecuencia <- as.numeric(str_extract(gsub("([0-9]+|[0-9]+\\.[0-9]+).*$", "\\1",
+                                                              InfoConsultas$FrecuenciaTratamiento), "([0-9]+).*$"))
+
+InfoConsultas$MatchFrecuencia <- str_extract(InfoConsultas$FrecuenciaTratamiento,
+                                             'hr|hs|hrs|hras|hora|horas|dia')
+InfoConsultas <- InfoConsultas%>%
+  mutate(MatchFrecuencia = ifelse(MatchFrecuencia == 'hr'  |
+                                  MatchFrecuencia == 'hs'  |
+                                  MatchFrecuencia == 'hrs' |
+                                  MatchFrecuencia == 'hras'|
+                                  MatchFrecuencia == 'hora'|
+                                  MatchFrecuencia == 'horas', 'hora', 'dia'))
+
+InfoConsultas$NumeroDuracion <- as.numeric(str_extract(gsub("([0-9]+|[0-9]+\\.[0-9]+).*$", "\\1", 
+                                                            InfoConsultas$DuracionTratamiento), "([0-9]+).*$"))
+
+InfoConsultas$MatchDuracion <- str_extract(InfoConsultas$DuracionTratamiento,
+                                           'dia|sem|semana|mes|mensual')
+
+InfoConsultas <- InfoConsultas%>%
+  dplyr::mutate(FrecuenciaHrs = ifelse(MatchFrecuencia == 'dia', NumeroFrecuencia*24, NumeroFrecuencia),
+                DuracionHrs = ifelse(MatchDuracion == 'dia', NumeroDuracion*24,
+                                     ifelse(MatchDuracion == 'sem', NumeroDuracion*24*7,
+                                            ifelse(MatchDuracion == 'mes', NumeroDuracion*24*30,
+                                                   ifelse(MatchDuracion == 'mensual', NumeroDuracion*24*30, 24)))))
+
+InfoConsultas <- InfoConsultas%>%
+  dplyr::mutate(FinalProductos = round(ifelse(MatchCantidad == 'gota' | MatchPresentacion == 'gota', 1, 
+                                              ifelse(MatchCantidad == MatchPresentacion & NumeroPresentacion != 0, 
+                                                     (NumeroCantidad*(DuracionHrs/FrecuenciaHrs))/NumeroPresentacion, 1)),3),
+                FinalCantidad  = ceiling(FinalProductos),
+                FinalProductos = ifelse(CveProducto != 0 & is.na(FinalProductos), 1, ifelse(FinalProductos > 20, 1, FinalProductos)),
+                FinalCantidad  = ifelse(CveProducto != 0 & is.na(FinalCantidad),  1, ifelse(FinalCantidad > 20, 1, FinalCantidad)))
+
+# View(tail(InfoConsultas, 1000))
+
+InfoConsultas <- subset(InfoConsultas, 
+                        select = -c(NumeroPresentacion, MatchPresentacion, 
+                                    NumeroCantidad, MatchCantidad,
+                                    NumeroFrecuencia, MatchFrecuencia,
+                                    NumeroDuracion, MatchDuracion, 
+                                    FrecuenciaHrs, DuracionHrs))
+
+
+
+############################ HASTA AQUI ME QUEDE 24/05/2019 @*
+
+library(odbc)
+library(RODBCDBI)
+
+
+rsqlserver <- dbConnect(odbc(),
+                        Driver = "SQL Server Native Client 11.0",
+                        Server = "simimx-bddcom",
+                        Database = "Ventas")
+
+
+DatosConsultas <- subset(InfoConsultas, select = c(Fecha, DocumentoOrigenId, CveConsultorio, 
+                                                   FolioReceta, CvePaciente, FinalProductos,
+                                                   FinalCantidad))
+
+
+dbWriteTable(conn = rsqlserver, name = "ProductosRealReceta", value = DatosConsultas)
+
+testDataFrame <- head(InfoConsultas, 100)
+testDataFrame <- as.data.frame(testDataFrame)
+testDataFrame <- testDataFrame[,1:5]
+
+View(testDataFrame)
+
+dbWriteTable(conn = rsqlserver, name = "TestLuis", value = testDataFrame)
+
+
+################# Informacion de 2019 #################
+
+InfoConsultas19 <- InfoConsultas%>%
+  dplyr::filter(Periodo >= 201901)
+
+################# Estadisticas Generales Mensuales ##############
+
+# Ajuste de edades para el calculo de la edad promedio de los pacientes. 
+InfoConsultas$EdadPacAjuste <- ifelse(InfoConsultas$EdadPaciente == 0, 
+                                      0.5, InfoConsultas$EdadPaciente)
+
+RecienNacidos <- InfoConsultas%>%
+  dplyr::filter(EdadPaciente == 0)
+
+##################################################################
+
+##### Calcular las estadisticas básicas por receta ##### 
+
+PrecioConsulta <- InfoConsultas %>%
+  dplyr::filter(FinalProductos < 20)%>% #### <- tener cuidado con este valor, hay algunos registros que al convertirse dan valores muy altos.
+  dplyr::group_by(Periodo, Fecha, Hora, DocumentoOrigenId, CveConsultorio, CvePaciente, 
+                  Diagnostico, TurnoConsultorio, SexoPaciente, EdadPaciente, EdadPacAjuste, Estado)%>%
+ dplyr::summarise(ProductosRecetados = n(),    # Medicamentos por receta
+                  ProductosSIFSI = sum(VentaFS == 1, na.rm = TRUE),
+                  ProductosNOFSI = sum(VentaFS == 0, na.rm = TRUE),
+            ImporteReceta = sum(Precio, na.rm = TRUE),
+            PiezasAjuste  = sum(FinalCantidad, na.rm = TRUE),    # Piezas por receta para el tratamiento
+            ImporteAjuste = sum(Precio*FinalCantidad, na.rm = TRUE),
+            PromedioReceta = ifelse(ProductosSIFSI != 0, ImporteReceta/ProductosSIFSI, 0),
+            PromedioAjuste = ifelse(ProductosSIFSI != 0, ImporteAjuste/ProductosSIFSI, 0))
+
+# View(PrecioConsulta)
+
+PrecioConsulta <- as.data.frame(PrecioConsulta)
+
+View(tail(PrecioConsulta, 1000))
+
+write.csv(PrecioConsulta, "DetallesConsulta.csv", row.names = FALSE)
+
+###### Estadisticas Estatales ######
+
+EstatalMensual <- PrecioConsulta%>%
+  group_by(Estado, Periodo, SexoPaciente)%>%
+  dplyr::summarise(
+    NumeroRecetas = n(),
+    EdadPromPaciente = sum(EdadPacAjuste, na.rm = TRUE)/n(),
+    ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+    ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+    ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+    PorAvastecimiento = ProductosSIFSI/ProductosRecetados,
+    ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+    ImporteTotal = sum(ImporteReceta, na.rm = TRUE),
+    PromedioProd = ImporteTotal/ProductosSIFSI)%>%
+  arrange(Estado,Periodo,SexoPaciente)
+
+write.csv(EstatalMensual,"EstatalMensual.csv", row.names = FALSE)
+View(EstatalMensual)
+
+#### Totales ####
+
+#  group_by(Periodo)%>%
+
+
+PrecioConsulta <- merge(x = PrecioConsulta, y = DiaSemana, by = "Fecha", all.x = TRUE)
+
+NumeroConsultoriosT <- PrecioConsulta%>%
+  dplyr::summarise(NumeroConsultorios = n_distinct(CveConsultorio))
+
+#PrecioMuestaN <- tail(PrecioConsulta, 10000)
+
+TiempoPromedioConsulta <- PrecioConsulta%>%
+  dplyr::filter(DiaSemana == 'Monday')%>%
+  mutate(FechaT = lubridate::ymd_hms(paste(Fecha, Hora, sep = " ")))%>%
+  dplyr::select(FechaT, Fecha, CveConsultorio, TurnoConsultorio)%>%
+  distinct(FechaT, Fecha, CveConsultorio, TurnoConsultorio, .keep_all = TRUE)%>%
+  arrange(CveConsultorio, FechaT, Fecha, TurnoConsultorio)%>%
+  group_by(Fecha, CveConsultorio, TurnoConsultorio)%>%
+  mutate(Differencia = FechaT- lag(FechaT))
+
+#str(TiempoPromedioConsulta)
+
+TiempoPromedioConsulta <- as.data.frame(TiempoPromedioConsulta)
+
+TiempoPromedioConsulta <- TiempoPromedioConsulta%>%
+  dplyr::summarise(Tiempo = mean(Differencia, na.rm = TRUE)/60)
+
+
+
+
+#View(TiempoPromedioConsulta)
+
+#str(TiempoPromedioConsulta)
+
+#TiempoPromedioConsulta$FechaT[1]
+
+
+ValoresTotales <- PrecioConsulta%>%
+  group_by(Periodo)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   NumeroConsultorios = n_distinct(CveConsultorio),
+                   Mujeres = sum(SexoPaciente == 'FEMENINO', na.rm = TRUE),
+                   Hombres = sum(SexoPaciente == 'MASCULINO',na.rm = TRUE),
+                   EdadPromPaciente = sum(EdadPacAjuste, na.rm = TRUE),
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   ImporteTotal = sum(ImporteReceta, na.rm = TRUE),
+                   PiezasAjuste = sum(PiezasAjuste, na.rm = TRUE),
+                   ImporteAjuste = sum(ImporteAjuste, na.rm = TRUE))%>%
+  dplyr::summarise(NumeroRecetas = sum(NumeroRecetas, na.rm = TRUE),
+                   Mujeres = sum(Mujeres),
+                   Hombres = sum(Hombres),
+                   EdadPromPaciente = sum(EdadPromPaciente, na.rm = TRUE)/NumeroRecetas,
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   PorAvastecimiento = ProductosSIFSI/ProductosRecetados,
+                   ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+                   ImporteTotal  = sum(ImporteTotal, na.rm = TRUE),
+                   PiezasAjuste  = sum(PiezasAjuste, na.rm = TRUE),
+                   PiezasReceta  = PiezasAjuste/NumeroRecetas,
+                   ImporteAjuste = sum(ImporteAjuste, na.rm = TRUE),
+                   PromedioProd  = ImporteTotal/ProductosSIFSI,
+                   PromedioAjuste = ImporteAjuste/ProductosSIFSI,
+                   ImpReceta = ProductosPorReceta*PromedioProd,
+                   ImpRecetaAjuste = PiezasReceta*PromedioAjuste)
+
+ValoresTotales <- cbind(ValoresTotales, NumeroConsultoriosT)
+ValoresTotales <- cbind(ValoresTotales, TiempoPromedioConsulta)
+
+
+View(ValoresTotales)
+
+write.csv(ValoresTotales, "ValoresTotales.csv", row.names = FALSE)
+
+############################### DATO ABRIL VICTOR ###############################
+
+ConsultasAbril <- PrecioConsulta %>%
+  dplyr::filter(Periodo == '201904')%>%
+  dplyr::group_by(Fecha)%>%
+  summarise(ConsultasDia = n())%>%
+  summarise(ConsultasPorDia = mean(ConsultasDia, na.rm = TRUE))
+
+############################### HORARIOS DE ATENCIÓN ###############################
+
+HorarioConsulta <- PrecioConsulta%>%
+  dplyr::select(Fecha, Hora)%>%
+  mutate(HoraT = lubridate::hms(Hora))
+  
+HorarioConsulta <- as.data.frame(HorarioConsulta)
+
+HorarioConsulta <- HorarioConsulta%>%
+  mutate(RangoHora = case_when((HoraT >= hms('0:00:00') & HoraT < hms('01:00:00')) ~ "0-1",
+                               (HoraT > hms('01:00:00') & HoraT <= hms('02:00:00')) ~ "1-2",
+                               (HoraT > hms('02:00:00') & HoraT <= hms('03:00:00')) ~ "2-3",
+                               (HoraT > hms('03:00:00') & HoraT <= hms('04:00:00')) ~ "3-4",
+                               (HoraT > hms('04:00:00') & HoraT <= hms('05:00:00')) ~ "4-5",
+                               (HoraT > hms('05:00:00') & HoraT <= hms('06:00:00')) ~ "5-6",
+                               (HoraT > hms('06:00:00') & HoraT <= hms('07:00:00')) ~ "6-7",
+                               (HoraT > hms('07:00:00') & HoraT <= hms('08:00:00')) ~ "7-8",
+                               (HoraT > hms('08:00:00') & HoraT <= hms('09:00:00')) ~ "8-9",
+                               (HoraT > hms('09:00:00') & HoraT <= hms('10:00:00')) ~ "9-10",
+                               (HoraT > hms('10:00:00') & HoraT <= hms('11:00:00')) ~ "10-11",
+                               (HoraT > hms('11:00:00') & HoraT <= hms('12:00:00')) ~ "11-12",
+                               (HoraT > hms('12:00:00') & HoraT <= hms('13:00:00')) ~ "12-13",
+                               (HoraT > hms('13:00:00') & HoraT <= hms('14:00:00')) ~ "13-14",
+                               (HoraT > hms('14:00:00') & HoraT <= hms('15:00:00')) ~ "14-15",
+                               (HoraT > hms('15:00:00') & HoraT <= hms('16:00:00')) ~ "15-16",
+                               (HoraT > hms('16:00:00') & HoraT <= hms('17:00:00')) ~ "16-17",
+                               (HoraT > hms('17:00:00') & HoraT <= hms('18:00:00')) ~ "17-18",
+                               (HoraT > hms('18:00:00') & HoraT <= hms('19:00:00')) ~ "18-19",
+                               (HoraT > hms('19:00:00') & HoraT <= hms('20:00:00')) ~ "19-20",
+                               (HoraT > hms('20:00:00') & HoraT <= hms('21:00:00')) ~ "20-21",
+                               (HoraT > hms('21:00:00') & HoraT <= hms('22:00:00')) ~ "21-22",
+                               (HoraT > hms('22:00:00') & HoraT <= hms('23:00:00')) ~ "22-23",
+                               (HoraT > hms('23:00:00') & HoraT <= hms('24:00:00')) ~ "23-24"))%>%
+  group_by(RangoHora)%>%
+  summarise(ConsultasHorario = n())%>%
+  dplyr::filter(!is.na(RangoHora))%>%
+  arrange(desc(ConsultasHorario))
+
+View(HorarioConsulta)
+
+
+ggplot(data = HorarioConsulta, aes(x = reorder(RangoHora, -ConsultasHorario), y = ConsultasHorario)) +
+  geom_bar(stat="identity", position=position_dodge(), fill = "dark green")+
+  theme_bw()+
+  #geom_text(size=3,hjust=-0.3, vjust=0.6)+				
+  xlab("Horario HRS") +
+  ylab("Número de Consultas") +
+  ggtitle("Número de Consultas Agrupadas por Horario: 01/01/19 - 19/05/19")+   # <--- Cambiar el titulo
+  scale_y_continuous(name = "Número de Consultas",
+                     breaks = c(0, 50000, 100000, 150000, 200000, 250000), 
+                     labels = c("0","50k","100k","150k", "200k", "250k"))+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))
+
+
+
+###################### Productos Agrupados por Mes ###################
+
+ValoresTotalesMes <- PrecioConsulta%>%
+  group_by(Periodo)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   EdadPromPaciente = sum(EdadPacAjuste, na.rm = TRUE)/n(),
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   PorAvastecimiento = ProductosSIFSI/ProductosRecetados,
+                   ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+                   ImporteTotal = sum(ImporteReceta, na.rm = TRUE),
+                   PromedioProd = ImporteTotal/ProductosSIFSI,
+                   NumeroConsultorios = n_distinct(CveConsultorio),
+                   RecetasPorConsultorio = NumeroRecetas/NumeroConsultorios)
+
+View(ValoresTotalesMes)
+
+write.csv(ValoresTotalesMes, "ValoresTotalesMes.csv", row.names = FALSE)
+
+######### Agrupados por padecimiento #########
+
+Padecimiento <- PrecioConsulta%>%
+  dplyr::group_by(Diagnostico)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   PorAvastecimiento  = ProductosSIFSI/ProductosRecetados,
+                   ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   ImporteAjuste  = sum(ImporteAjuste, na.rm = TRUE),
+                   PromedioProdu  = Importe/ProductosSIFSI,
+                   PromedioAjuste = ImporteAjuste/ProductosSIFSI,
+                   ValorReceta = ProductosPorReceta*PromedioAjuste)%>%
+  arrange(desc(NumeroRecetas))%>%
+  dplyr::filter(!is.na(Diagnostico))
+
+Padecimiento$PromedioProdu  <- ifelse(is.nan(Padecimiento$PromedioProdu),  0, Padecimiento$PromedioProdu)
+Padecimiento$PromedioAjuste <- ifelse(is.nan(Padecimiento$PromedioAjuste), 0, Padecimiento$PromedioAjuste)
+
+View(Padecimiento)
+
+write.csv(Padecimiento, "Padecimiento.csv", row.names = FALSE)
+
+PadecimientoTabla <- Padecimiento%>%
+  dplyr::select(Diagnostico, NumeroRecetas, ProductosPorReceta, ImporteAjuste, ValorReceta)%>%
+  top_n(n = 10, wt = NumeroRecetas)
+
+PadecimientoMax <- Padecimiento%>%
+  dplyr::select(Diagnostico, NumeroRecetas, ProductosPorReceta, ImporteAjuste, ValorReceta)%>%
+  arrange(desc(ValorReceta))%>%
+  top_n(n = 10, wt = ValorReceta)
+
+View(PadecimientoTabla)
+View(PadecimientoMax)
+
+write.csv(PadecimientoTabla, "TopPadeceRecetas.csv", row.names = FALSE)
+write.csv(PadecimientoMax, "TopPadeceValor.csv", row.names = FALSE)
+
+####### Agrupados por Padecimiento y Tratamiento #######
+
+TotalDiagnostico <- subset(Padecimiento, select = c(Diagnostico, NumeroRecetas))
+colnames(TotalDiagnostico) <- c("Diagnostico", "RecetasTotales")
+
+PadeceTrata <- InfoConsultas %>%
+  dplyr::filter(!is.infinite(FinalCantidad))%>%
+  dplyr::group_by(Diagnostico, Producto)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   ImportePadece = sum(Precio, na.rm = TRUE),
+                   ImporteAjuste = sum(Precio*FinalCantidad, na.rm = TRUE))
+
+PadeceTrata <- PadeceTrata[complete.cases(PadeceTrata),]
+
+PadeceTrata <- PadeceTrata%>%
+top_n(n = 3, wt = NumeroRecetas)
+
+PadeceTrata <- merge(x = PadeceTrata, y = TotalDiagnostico, by = "Diagnostico", all.x = TRUE)
+
+PadeceTrata <- PadeceTrata%>%
+  mutate(PorcentajeMedica = NumeroRecetas/RecetasTotales)%>%
+  arrange(desc(RecetasTotales), desc(NumeroRecetas), Diagnostico, Producto)
+
+write.csv(PadeceTrata, "PadeceTrata.csv", row.names = FALSE)
+
+# View(PadeceTrata)
+
+#### Agrupados por Edad, Sexo, Diagnostico #### 
+
+ValoresEdadSexDiag <- PrecioConsulta%>%
+  dplyr::group_by(EdadPaciente, SexoPaciente, Diagnostico)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   PorAvastecimiento = ProductosSIFSI/ProductosRecetados,
+                   ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   PromedioProdu = Importe/ProductosSIFSI)
+
+View(ValoresEdadSexDiag)
+
+write.csv(ValoresEdadSexDiag, "ValoresEdadSexDiagMarzo19.csv", row.names = FALSE)
+
+##### Agrupadas por Edad y Sexo #####
+
+ValorEdadSexo <- PrecioConsulta%>%
+  mutate(RangoEdad = case_when((EdadPacAjuste >= 0 & EdadPacAjuste <= 10) ~ "0-10",
+                               (EdadPacAjuste > 10 & EdadPacAjuste <= 20) ~ "11-20",
+                               (EdadPacAjuste > 20 & EdadPacAjuste <= 30) ~ "21-30",
+                               (EdadPacAjuste > 30 & EdadPacAjuste <= 40) ~ "31-40",
+                               (EdadPacAjuste > 40 & EdadPacAjuste <= 50) ~ "41-50",
+                               (EdadPacAjuste > 50 & EdadPacAjuste <= 60) ~ "51-60",
+                               (EdadPacAjuste > 60 & EdadPacAjuste <= 70) ~ "61-70",
+                               (EdadPacAjuste > 70 & EdadPacAjuste <= 80) ~ "71-80",
+                               (EdadPacAjuste > 80 ) ~ "81-100"),
+       RangoEdith =  case_when((EdadPacAjuste >= 0 & EdadPacAjuste <= 9) ~ "0-9",
+                  (EdadPacAjuste > 9 & EdadPacAjuste <= 19) ~ "10-19",
+                  (EdadPacAjuste > 20 & EdadPacAjuste <= 59) ~ "20-59",
+                  (EdadPacAjuste > 59) ~ "59-100"))%>%
+  group_by(RangoEdad, SexoPaciente)%>%
+  dplyr::filter(SexoPaciente == 'MASCULINO' | SexoPaciente == 'FEMENINO')%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   ImporteAjuste  = sum(ImporteAjuste, na.rm = TRUE),
+                   ImpReceta = ImporteAjuste/NumeroRecetas)
+  
+
+
+View(ValorEdadSexo)
+
+ggplot(data = ValorEdadSexo, 
+       mapping = aes(x = RangoEdad, fill = SexoPaciente, 
+                     y = ifelse(test = SexoPaciente == "MASCULINO", 
+                                yes = -ImporteAjuste, no = ImporteAjuste))) +
+  geom_bar(stat = "identity") +
+  theme_bw()+
+  xlab("Edad Paciente") +
+  ylab("$ Importe ") +
+  ggtitle("Clasificación Edad y Genero Pacientes FSI 01 de Enero 2019 a 19 Mayo 2019")+
+  scale_y_continuous(breaks = c(-10000000, -20000000, -30000000, -40000000, -50000000,
+                                0, 10000000, 20000000, 30000000, 40000000, 50000000), 
+                     labels = c("10M","20M","30M", "40M", "50M"
+                       ,"0","10M","20M","30M", "40M", "50M"), 
+                     limits = max(ValorEdadSexo$ImporteAjuste) * c(-1,1)) +
+  scale_fill_manual(name = "Sexo Paciente",
+                    values = c("red", "steel blue"), labels = c("Mujeres", "Hombres"))+
+  coord_flip()
+
+
+
+ggplot(data = ValorEdadSexo, 
+       mapping = aes(x = RangoEdad, fill = SexoPaciente, 
+                     y = ifelse(test = SexoPaciente == "MASCULINO", 
+                                yes = -ImpReceta, no = ImpReceta))) +
+  geom_bar(stat = "identity") +
+  theme_linedraw()+
+  xlab("Edad Paciente") +
+  ylab("$ Importe Promedio Receta ") +
+  ggtitle("Clasificación Edad y Genero Pacientes FSI, 01 de Enero 2019 a 19 Mayo 2019")+
+  scale_y_continuous(breaks = c(-50, -100, -150, -200, -250, -300, 
+                                0, 50, 100, 150, 200, 250, 300), 
+                     labels = c("50", "100", "150", "200", "250" ,"300",
+                                "0", "50", "100", "150", "200", "250", "300"), 
+                     limits = max(ValorEdadSexo$ImpReceta) * c(-1,1)) +
+  scale_fill_manual(name = "Sexo Paciente",
+                    values = c("red", "steel blue"), labels = c("Mujeres", "Hombres"))+
+  coord_flip()
+
+
+
+ggplot(data = ValorEdadSexo, aes(x = RangoEdad, y = ImporteAjuste, 
+                                 fill = SexoPaciente)) +
+  geom_bar(stat="identity", position = position_dodge())+
+  theme_bw()+
+  #geom_text(size=3,hjust=-0.3, vjust=0.6)+				
+  xlab("Rango Edad") +
+  ylab("$ Importe ") +
+  ggtitle("Importe por Rango de Edad y Sexo. 01 Enero 2019 - 19 Mayo 2019")+   # <--- Cambiar el titulo
+  labs(fill = "Importe")+
+  scale_y_continuous(breaks = c(0, 10000000, 20000000, 30000000, 40000000, 50000000, 60000000), 
+                     labels = c("0","10M","20M", "30M", "40M", "50M", "60M"))+
+  scale_fill_manual(name = "Sexo",
+                    values = c("red", "steel blue"), labels = c("MUJERES", "HOMBRES"))+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))
+
+
+
+##### Agrupados por Edad y Diagnostico #####
+
+ValoresEdadDiag <- PrecioConsulta%>%
+  dplyr::group_by(EdadPaciente, Diagnostico)%>%
+  dplyr::summarise(ProductosVendidos = sum(ProductosSIFSI, na.rm = TRUE),
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   PromedioProdu = Importe/ProductosVendidos)
+
+View(ValoresEdadDiag)
+
+write.csv(ValoresEdadDiag, "ValoresEdadDiagMarzo19.csv", row.names = FALSE)
+
+##### Agrupados por Edad #####
+
+ValoresEdad <- PrecioConsulta%>%
+  dplyr::group_by(EdadPaciente)%>%
+  dplyr::summarise(Pacientes = n(),
+                   ProductosVendidos = sum(ProductosSIFSI, na.rm = TRUE),
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   PromedioProdu = Importe/ProductosVendidos)
+
+View(ValoresEdad)
+
+write.csv(ValoresEdad, "ValoresEdadMarzo19.csv", row.names = FALSE)
+
+
+ValoresEdadX <- ValoresEdad[!is.na(ValoresEdad$EdadPaciente),]
+
+hist(ValoresEdadX$EdadPaciente, ValoresEdadX$Pacientes)
+
+
+
+
+
+##### Linea de Tiempo de padecimientos #####
+
+Periodo <- c('201801', '201802', '201803', '201804', '201805',
+            '201806', '201807', '201808', '201809', '201810',
+            '201811', '201812', '201901', '201902', '201903')
+
+# PeriodoMes <- c('Enero18', 'Febrero18', 'Marzo18', 'Abril18','Mayo18',
+#                 'Junio18', 'Julio18', 'Agosto18', 'Septiembre18', 'Octubre18', 
+#                 'Noviembre18', 'Diciembre18','Enero19', 'Febrero19', 'Marzo19')
+
+PeriodoMes <- c('Ene18', 'Feb18', 'Mar18', 'Abr18','May18',
+                'Jun18', 'Jul18', 'Ago18', 'Sep18', 'Oct18', 
+                'Nov18', 'Dic18','Ene19', 'Feb19', 'Mar19')
+
+
+DataFramePeriodo <- data.frame(Periodo = Periodo, PeriodoMes = PeriodoMes)
+
+#View(DataFramePeriodo)
+
+TemporalDiagnostico <- InfoConsultas%>%
+  dplyr::group_by(Periodo, Diagnostico)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   ImportePadece = sum(Precio, na.rm = TRUE))
+
+TemporalDiagnostico <- TemporalDiagnostico[complete.cases(TemporalDiagnostico),]
+
+TemporalDiagnostico <- TemporalDiagnostico%>%
+  top_n(n = 3, wt = NumeroRecetas)%>%
+  arrange(Periodo, desc(NumeroRecetas))
+
+
+#View(TemporalDiagnostico)
+
+TemporalDiagnostico <- as.data.frame(TemporalDiagnostico)
+TemporalDiagnostico$Periodo <- as.factor(TemporalDiagnostico$Periodo)
+
+TemporalDiagnostico <- merge(x = TemporalDiagnostico, y = DataFramePeriodo, by = "Periodo", all.x = TRUE)
+
+
+
+TemporalDiagnostico$PeriodoMes <- factor(TemporalDiagnostico$PeriodoMes,
+                                   levels = c('Ene18', 'Feb18', 'Mar18', 'Abr18','May18',
+                                              'Jun18', 'Jul18', 'Ago18', 'Sep18', 'Oct18', 
+                                              'Nov18', 'Dic18','Ene19', 'Feb19', 'Mar19'))
+
+
+library(stringr)
+TemporalDiagnostico$Resumen2 <- word(TemporalDiagnostico$Diagnostico, start = 1, end = 2, sep = fixed(" "))
+TemporalDiagnostico$Resumen3 <- word(TemporalDiagnostico$Diagnostico, start = 1, end = 3, sep = fixed(" "))
+
+TemporalDiagnostico$Resumen3 <- ifelse(is.na(TemporalDiagnostico$Resumen3), TemporalDiagnostico$Resumen2, TemporalDiagnostico$Resumen3)
+
+TemporalDiagnostico$Resumen <- TemporalDiagnostico$Resumen3
+
+TemporalDiagnostico <- subset(TemporalDiagnostico, select = -c(Resumen2, Resumen3))
+
+
+
+
+ggplot(data = TemporalDiagnostico, aes(x = PeriodoMes, y = NumeroRecetas, 
+                                       group = Diagnostico, fill = Resumen))+
+  geom_bar(stat="identity", position=position_dodge())+
+  theme_bw()+
+  xlab("Periodo") +
+  ylab("Número de Recetas") +
+  ggtitle("Padecimientos más recurrentes por Periodo, obtenidos del sistema EXE.")+
+  scale_y_continuous(breaks = c(0, 100000 , 200000, 300000, 400000, 500000), 
+                     labels = c("0", "100k" ,"200k", "300k", "400k", "500k"), limits = c(0,8e5))+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))+
+  geom_text(aes(label = Diagnostico, y = 500000, color = Resumen),
+            position = position_dodge(0.7), angle=90, size=2.5, hjust=0, vjust = 0.0)
+
+##################### Productos más recetados que no tenemos en FSI #####################
+
+ProductosNoFSI <- InfoConsultas%>%
+  dplyr::filter(CveProducto == 0)
+str(ProductosNoFSI)
+
+ResumenNoFSI <- ProductosNoFSI%>%
+  dplyr::group_by(Diagnostico, Sustancia)%>%
+  dplyr::summarise(Veces = n())%>%
+  arrange(desc(Veces))%>%
+  dplyr::group_by(Sustancia)%>%
+  dplyr::summarise(Veces = sum(Veces, na.rm = TRUE))%>%
+  arrange(desc(Veces))
+View(ResumenNoFSI)
+
+write.csv(ResumenNoFSI, "ResumenNoFSI.csv", row.names = FALSE)
+
+
+###################### DETALLES A NIVEL PRODUCTO POR RANGO EDAD ######################
+
+Producto42 <- InfoConsultas%>%
+  filter(CveProducto == 42)
+
+EdadSexoProducto <- InfoConsultas%>%
+  filter(FinalCantidad<20)%>%
+  mutate(RangoEdad = case_when((EdadPacAjuste >= 0 & EdadPacAjuste <= 10) ~ "0-10",
+                               (EdadPacAjuste > 10 & EdadPacAjuste <= 20) ~ "11-20",
+                               (EdadPacAjuste > 20 & EdadPacAjuste <= 30) ~ "21-30",
+                               (EdadPacAjuste > 30 & EdadPacAjuste <= 40) ~ "31-40",
+                               (EdadPacAjuste > 40 & EdadPacAjuste <= 50) ~ "41-50",
+                               (EdadPacAjuste > 50 & EdadPacAjuste <= 60) ~ "51-60",
+                               (EdadPacAjuste > 60 & EdadPacAjuste <= 70) ~ "61-70",
+                               (EdadPacAjuste > 70 & EdadPacAjuste <= 80) ~ "71-80",
+                               (EdadPacAjuste > 80 ) ~ "81-100"))%>%
+  group_by(RangoEdad, SexoPaciente, CveProducto, Producto)%>%
+  dplyr::filter(SexoPaciente == 'MASCULINO' | SexoPaciente == 'FEMENINO')%>%
+  dplyr::summarise(NumeroRecetas = n(),    # Medicamentos por receta
+                   ProductosSIFSI = sum(VentaFS == 1, na.rm = TRUE),
+                   ProductosNOFSI = sum(VentaFS == 0, na.rm = TRUE),
+                   ImporteReceta = sum(Precio, na.rm = TRUE),
+                   PiezasAjuste  = sum(FinalCantidad, na.rm = TRUE),    # Piezas por receta para el tratamiento
+                   ImporteAjuste = sum(Precio*FinalCantidad, na.rm = TRUE),
+                   PromedioReceta = ifelse(ProductosSIFSI != 0, ImporteReceta/ProductosSIFSI, 0),
+                   PromedioAjuste = ifelse(ProductosSIFSI != 0, ImporteAjuste/ProductosSIFSI, 0))%>%
+  dplyr::filter(!is.infinite(ImporteAjuste) &  RangoEdad == '21-30')%>%  #( | RangoEdad == '21-30')
+  arrange(desc(ImporteAjuste), SexoPaciente)
+
+
+View(EdadSexoProducto)
+
+write.csv(EdadSexoProducto, "Rango010.csv", row.names = FALSE)
+write.csv(EdadSexoProducto, "Rango2130.csv", row.names = FALSE)
+
+
+########## TOP VENTAS PIEZAS VS TOP RECETAS ##########
+
+cn <-odbcDriverConnect(connection = "Driver={SQL Server Native Client 11.0};
+                       server=simimx-bddcom;database=Ventas;trusted_connection=yes;")
+
+QueryVenta <- "DECLARE
+@CveConsultorio VARCHAR(10), -- No usado por el momento
+@FechaIni       DATE,
+@FechaFin       DATE,
+@Periodo        VARCHAR(10)
+SET @CveConsultorio =  '1' -- No usado por el momento
+SET @FechaIni =     '2019-01-01'  
+SET @FechaFin =     '2019-05-19'
+SET @Periodo  =     '201901'
+SELECT CveProducto, SUM(Importe) AS Imp, Sum(Piezas) AS Pzs, SUM(Tickets) AS Tck
+FROM Ventas.Proceso.VentaProducto WITH(NOLOCK)
+WHERE Periodo >= @Periodo AND CveProducto IN(SELECT CveProducto
+FROM Ventas.Catalogo.ProductoQV WITH(NOLOCK)
+WHERE Categoria = 'MEDICAMENTOS') AND
+CveUnidad IN (
+SELECT DISTINCT(CveUnidad)
+FROM (
+SELECT Convert(CHAR(6), ICabecera.Fecha,112) AS Periodo, ICabecera.Fecha, Hora, ICabecera.DocumentoOrigenId, ICabecera.CveConsultorio,
+TipoDocumento, FolioReceta, CvePaciente, ICabecera.CveUnidad, Consultorio, TurnoConsultorio, Cedula, CveSexo, 
+CveEdoCivil, SexoPaciente, EdadPaciente CveBrick, Unidad, CveDivision, CategoriaVenta, Direccion, 
+Supervision, FechaApertura, EstRegistroU, EstatusUnidad, Estado, EstadoQV,
+Ciudad, CiudadQV, Municipio, Colonia, Calle, CodigoPostal, Latitud, Longitud
+FROM ( -- CABECERA
+SELECT Fecha, Hora, TipoDocumento, DocumentoOrigenId, FolioReceta,
+CvePaciente, CveUnidad, CveConsultorio, Consultorio, TurnoConsultorio, Cedula, CveSexo, 
+CveEdoCivil, Sexo AS SexoPaciente, Edad AS EdadPaciente
+FROM Salud.dbo.CabeceraDocumento WITH(NOLOCK)
+WHERE Fecha BETWEEN @FechaIni AND @FechaFin
+) AS ICabecera LEFT JOIN (
+SELECT CveUnidad, CveBrick, Unidad, CveDivision, CategoriaVenta, Direccion, 
+Supervision, FechaApertura, EstatusRegistro AS EstRegistroU, EstatusUnidad, Estado, EstadoQV,
+Ciudad, CiudadQV, Municipio, Colonia, Calle, CodigoPostal, Latitud, Longitud
+FROM Ventas.Catalogo.Unidad 
+) AS IUnidad ON ICabecera.CveUnidad = IUnidad.CveUnidad) AS CveUnidades)
+GROUP BY CveProducto
+ORDER BY CveProducto"
+
+VentaPiezas <- sqlQuery(cn, QueryVenta)
+
+View(VentaPiezas)
+
+VentaPiezas$Imp <- round(VentaPiezas$Imp)
+VentaPiezas$Pzs <- round(VentaPiezas$Pzs)
+VentaPiezas$Tck <- round(VentaPiezas$Tck)
+
+
+VentaPiezas <- VentaPiezas%>%
+  dplyr::select(CveProducto, Pzs)%>%
+  arrange(desc(Pzs))
+
+
+ProductosRecetados <- InfoConsultas%>%
+  filter(FinalCantidad<20)%>%
+  group_by(CveProducto, Producto)%>%
+  dplyr::summarise(NumeroRecetas = n(),    
+                   ProductosSIFSI = sum(VentaFS == 1, na.rm = TRUE),
+                   ProductosNOFSI = sum(VentaFS == 0, na.rm = TRUE),
+                   ImporteReceta = sum(Precio, na.rm = TRUE),
+                   PiezasAjuste  = sum(FinalCantidad, na.rm = TRUE),    # Piezas por receta para el tratamiento
+                   ImporteAjuste = sum(Precio*FinalCantidad, na.rm = TRUE),
+                   PromedioReceta = ifelse(ProductosSIFSI != 0, ImporteReceta/ProductosSIFSI, 0),
+                   PromedioAjuste = ifelse(ProductosSIFSI != 0, ImporteAjuste/ProductosSIFSI, 0))%>%
+  dplyr::filter(!is.na(Producto))%>%
+  dplyr::select(CveProducto, Producto, PiezasAjuste)%>%
+  dplyr::arrange(desc(PiezasAjuste))
+
+
+ComparaVenta <- merge(x = VentaPiezas, y = ProductosRecetados, by = "CveProducto", all.x = TRUE)
+
+ComparaVenta <- ComparaVenta%>%
+  dplyr::select(CveProducto, Producto, Pzs, PiezasAjuste)%>%
+  top_n(n = 20, wt = Pzs)%>%
+  dplyr::arrange(desc(Pzs))
+
+colnames(ComparaVenta) <- c("CveProducto", "Producto", "Piezas vendidas", "Piezas Recetadas")
+
+View(ComparaVenta)
+
+
+write.csv(ComparaVenta, "ComparaVenta.csv", row.names = FALSE)
+
+ComparaVentaMelt <- melt(ComparaVenta, id = "Producto")
+
+ComparaVentaMelt$Order <- ComparaVentaMelt$value*ComparaVentaMelt$value*ComparaVentaMelt$value
+# View(ComparaVentaMelt)
+
+ggplot(data = ComparaVentaMelt, aes(x = reorder(Producto, -Order), y = value, fill = variable)) +
+  geom_bar(stat="identity", position=position_dodge())+
+  theme_bw()+
+  #geom_text(size=3,hjust=-0.3, vjust=0.6)+				
+  xlab("Producto") +
+  ylab("Piezas") +
+  ggtitle("Relación entre productos vendidos y recetados 01/01/2019 vs 19/05/19")+   # <--- Cambiar el titulo
+  labs(fill = "Piezas")+
+  scale_y_continuous(breaks = c(0, 250000, 500000, 750000, 1000000, 1250000, 1500000, 1750000, 2000000), 
+                     labels = c("0","250k","500k","750k", "1M", "1.25M", "1.5M", "1.75M", "2M"))+
+  scale_fill_manual(name = "Piezas",
+                    values = c("red", "steel blue"), labels = c("Vendidas", "Recetadas"))+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))
+
+
+################################################### GRAFICOS DE PRUEBA PARA REPORTE ###################################################
+
+Padecimiento <- PrecioConsulta%>%
+  dplyr::group_by(Diagnostico)%>%
+  dplyr::summarise(NumeroRecetas = n(),
+                   ProductosRecetados = sum(ProductosRecetados, na.rm = TRUE),
+                   ProductosSIFSI = sum(ProductosSIFSI, na.rm = TRUE),
+                   ProductosNOFSI = sum(ProductosNOFSI, na.rm = TRUE),
+                   PorAvastecimiento  = ProductosSIFSI/ProductosRecetados,
+                   ProductosPorReceta = ProductosRecetados/NumeroRecetas,
+                   Importe = sum(ImporteReceta, na.rm = TRUE),
+                   ImporteAjuste  = sum(ImporteAjuste, na.rm = TRUE),
+                   PromedioProdu  = Importe/ProductosSIFSI,
+                   PromedioAjuste = ImporteAjuste/ProductosSIFSI)%>%
+  arrange(desc(NumeroRecetas))%>%
+  dplyr::filter(!is.na(Diagnostico))
+
+Padecimiento$PromedioProdu  <- ifelse(is.nan(Padecimiento$PromedioProdu),  0, Padecimiento$PromedioProdu)
+Padecimiento$PromedioAjuste <- ifelse(is.nan(Padecimiento$PromedioAjuste), 0, Padecimiento$PromedioAjuste)
+
+# View(Padecimiento)
+# write.csv(Padecimiento, "Padecimiento.csv", row.names = FALSE)
+
+
+PadecimientoTop <- Padecimiento%>%
+  mutate(DiagnosticoR = ifelse(lengths(strsplit(as.character(Diagnostico), " ")) == 1,
+                               word(string = Diagnostico, start = 1, end = 1, sep = fixed(" ")),
+                               ifelse(lengths(strsplit(as.character(Diagnostico), " ")) == 2,
+                                      word(string = Diagnostico, start = 1, end = 2, sep = fixed(" ")),
+                                      word(string = Diagnostico, start = 1, end = 3, sep = fixed(" ")))))%>%
+  dplyr::filter(!is.na(Diagnostico))%>%
+  top_n(n = 20, wt = NumeroRecetas)%>%
+ dplyr::select(DiagnosticoR, Importe, ImporteAjuste)
+
+
+# View(PadecimientoTop)
+
+PadecimientoMelt <- melt(PadecimientoTop, id = "DiagnosticoR")
+# View(PadecimientoMelt)
+
+ggplot(data=PadecimientoMelt, aes(x = reorder(DiagnosticoR, -value), y = value, fill = variable)) +
+  geom_bar(stat="identity", position=position_dodge())+
+  theme_bw()+
+  #geom_text(size=3,hjust=-0.3, vjust=0.6)+				
+  xlab("Diagnostico") +
+  ylab("$ Importe ") +
+  ggtitle("Top 20 Padecimientos Diagnosticados 01 Enero 2019 - 19 Mayo 2019")+   # <--- Cambiar el titulo
+  labs(fill = "Importe")+
+  scale_y_continuous(breaks = c(0, 25000000, 50000000, 75000000, 100000000, 125000000), 
+                     labels = c("0","25M","50M","75M", "100M", "125M"))+
+  scale_fill_manual(name = "Importe",
+                      values = c("red", "steel blue"), labels = c("Importe Mínimo", "Importe Ideal"))+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))
+
+
+
+
